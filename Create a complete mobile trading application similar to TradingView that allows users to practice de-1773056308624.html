@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeSim - Advanced Trading Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        secondary: '#1e40af',
+                        dark: '#0f172a',
+                        light: '#f8fafc',
+                        success: '#10b981',
+                        error: '#ef4444',
+                        accent: '#8b5cf6'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        .chart-container {
+            height: 70vh;
+            position: relative;
+        }
+        .bottom-nav {
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+        }
+        .indicator-btn {
+            transition: all 0.3s ease;
+        }
+        .indicator-btn:hover {
+            transform: translateY(-2px);
+        }
+        .trade-card {
+            transition: all 0.3s ease;
+        }
+        .trade-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .timeframe-btn.active {
+            background-color: #2563eb;
+            color: white;
+        }
+        .modal {
+            backdrop-filter: blur(5px);
+        }
+        .price-up {
+            color: #10b981;
+        }
+        .price-down {
+            color: #ef4444;
+        }
+        .drawing-tool {
+            transition: all 0.2s ease;
+        }
+        .drawing-tool:hover {
+            background-color: #1e293b;
+        }
+        .drawing-tool.active {
+            background-color: #2563eb;
+        }
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+        .hidden-sidebar {
+            transform: translateX(-100%);
+        }
+        .overlay {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+        }
+        .widget-container {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        .widget-header {
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        .login-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        .google-btn {
+            background: #fff;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        .google-btn:hover {
+            background: #f5f5f5;
+        }
+        .notification {
+            animation: fadeIn 0.3s, fadeOut 0.3s 2.7s forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(10px); }
+        }
+        .alert-badge {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .portfolio-item {
+            transition: all 0.3s ease;
+        }
+        .portfolio-item:hover {
+            background-color: #1e293b;
+        }
+        .trade-history-row {
+            transition: all 0.2s ease;
+        }
+        .trade-history-row:hover {
+            background-color: #1e293b;
+        }
+        .market-overview-item {
+            transition: all 0.2s ease;
+        }
+        .market-overview-item:hover {
+            background-color: #1e293b;
+        }
+        .watchlist-item {
+            transition: all 0.2s ease;
+        }
+        .watchlist-item:hover {
+            background-color: #1e293b;
+        }
+        .order-book-cell {
+            transition: all 0.2s ease;
+        }
+        .order-book-cell:hover {
+            background-color: #1e293b;
+        }
+        .indicator-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .indicator-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .indicator-list::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .indicator-list::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-dark min-h-screen">
+    <!-- Notification System -->
+    <div id="notificationContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="login-modal">
+        <div class="login-card">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-chart-line text-white text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold">Welcome Back</h2>
+                <p class="text-gray-400 mt-2">Sign in to continue to TradeSim</p>
+            </div>
+            
+            <button id="googleLoginBtn" class="google-btn w-full py-3 rounded-lg font-medium flex items-center justify-center mb-4">
+                <i class="fab fa-google mr-2"></i> Sign in with Google
+            </button>
+            
+            <div class="relative my-4">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-700"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-dark text-gray-400">Or continue with</span>
+                </div>
+            </div>
+            
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Email</label>
+                    <input type="email" id="email" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary" placeholder="your@email.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                    <input type="password" id="password" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full bg-primary hover:bg-secondary py-2 rounded-lg font-medium transition">
+                    Sign In
+                </button>
+            </form>
+            
+            <div class="mt-4 text-center">
+                <button id="forgotPassword" class="text-sm text-primary hover:underline">
+                    Forgot password?
+                </button>
+            </div>
+            
+            <div class="mt-6 text-center text-sm text-gray-400">
+                Don't have an account? 
+                <button id="createAccount" class="text-primary hover:underline ml-1">
+                    Create one
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="alertModal" class="modal fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-900 rounded-xl p-6 w-full max-w-md border border-gray-700">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Create Price Alert</h3>
+                <button id="closeAlertModal" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="alertForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Asset</label>
+                    <select id="alertAsset" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option>BTC/USDT</option>
+                        <option>ETH/USDT</option>
+                        <option>SOL/USDT</option>
+                        <option>ADA/USDT</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Condition</label>
+                    <select id="alertCondition" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option>Price reaches</option>
+                        <option>Price above</option>
+                        <option>Price below</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Target Price ($)</label>
+                    <input type="number" id="alertPrice" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Enter target price">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Notification</label>
+                    <select id="alertNotification" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option>Email</option>
+                        <option>Push Notification</option>
+                        <option>Both</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-primary hover:bg-secondary py-2 rounded-lg font-medium transition">
+                    Create Alert
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-dark border-b border-gray-800 p-4 flex justify-between items-center sticky top-0 z-40">
+        <div class="flex items-center space-x-2">
+            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <i class="fas fa-chart-line text-white text-xl"></i>
+            </div>
+            <h1 class="text-xl font-bold">TradeSim Pro</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="relative">
+                <input type="text" id="searchInput" placeholder="Search asset..." class="bg-gray-800 rounded-lg px-4 py-2 pl-10 w-48 focus:outline-none focus:ring-2 focus:ring-primary">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+            </div>
+            <button id="notificationsBtn" class="p-2 rounded-full hover:bg-gray-800 transition relative">
+                <i class="fas fa-bell"></i>
+                <span id="alertCount" class="absolute -top-1 -right-1 bg-error text-white text-xs rounded-full h-5 w-5 flex items-center justify-center alert-badge hidden">0</span>
+            </button>
+            <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-800 transition">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button id="loginButton" class="p-2 rounded-full hover:bg-gray-800 transition">
+                <i class="fas fa-user"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex flex-col md:flex-row h-[calc(100vh-140px)]">
+        <!-- Left Sidebar - Drawing Tools -->
+        <aside class="sidebar w-full md:w-16 bg-gray-900 border-r border-gray-800 p-3 flex flex-row md:flex-col items-center justify-between md:justify-start space-y-4 md:space-y-6">
+            <div class="flex flex-row md:flex-col space-x-2 md:space-x-0">
+                <button class="drawing-tool w-10 h-10 rounded-lg flex items-center justify-center bg-gray-800 active:bg-primary" title="Trend Line" data-tool="trendline">
+                    <i class="fas fa-chart-line"></i>
+                </button>
+                <button class="drawing-tool w-10 h-10 rounded-lg flex items-center justify-center bg-gray-800" title="Horizontal Line" data-tool="horizontal">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button class="drawing-tool w-10 h-10 rounded-lg flex items-center justify-center bg-gray-800" title="Vertical Line" data-tool="vertical">
+                    <i class="fas fa-long-arrow-alt-right"></i>
+                </button>
+                <button class="drawing-tool w-10 h-10 rounded-lg flex items-center justify-center bg-gray-800" title="Rectangle" data-tool="rectangle">
+                    <i class="fas fa-square"></i>
+                </button>
+                <button class="drawing-tool w-10 h-10 rounded-lg flex items-center justify-center bg-gray-800" title="Circle" data-tool="circle">
+                    <i class="fas fa-circle"></i>
+                </button>
+                <button class="drawing-tool w-10 h-10 rounded-lg flex items-center justify-center bg-gray-800" title="Text Note" data-tool="text">
+                    <i class="fas fa-font"></i>
+                </button>
+                <button class="drawing-tool w-10 h-10 rounded-lg flex items-center justify-center bg-gray-800" title="Fibonacci" data-tool="fibonacci">
+                    <i class="fas fa-chart-bar"></i>
+                </button>
+            </div>
+            <div class="flex flex-row md:flex-col space-x-2 md:space-x-0">
+                <button class="drawing-tool w-10 h-10 rounded-lg flex items-center justify-center bg-gray-800" title="Brush Tool" data-tool="brush">
+                    <i class="fas fa-paint-brush"></i>
+                </button>
+                <button class="drawing-tool w-10 h-10 rounded-lg flex items-center justify-center bg-gray-800" title="Clear All" data-tool="clear">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Center - Chart Area -->
+        <main class="flex-1 flex flex-col">
+            <div class="p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold" id="currentAsset">BTC/USDT</h2>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <span class="text-2xl font-bold" id="currentPrice">$63,421.75</span>
+                            <span class="price-up flex items-center" id="priceChange"><i class="fas fa-arrow-up mr-1"></i> +2.34%</span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button id="refreshBtn" class="bg-primary hover:bg-secondary px-4 py-2 rounded-lg text-sm font-medium transition flex items-center">
+                            <i class="fas fa-sync-alt mr-2"></i>Refresh
+                        </button>
+                        <button id="exportBtn" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center">
+                            <i class="fas fa-download mr-2"></i>Export
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chart Container -->
+                <div class="chart-container bg-gray-900 rounded-xl p-4 mb-4 relative">
+                    <canvas id="priceChart"></canvas>
+                    <div class="absolute top-4 right-4 bg-gray-800 bg-opacity-70 px-3 py-1 rounded-lg text-sm">
+                        <i class="fas fa-crosshairs mr-1"></i> Crosshair On
+                    </div>
+                </div>
+
+                <!-- Widgets Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <!-- Volume Widget -->
+                    <div class="widget-container rounded-xl p-4">
+                        <div class="widget-header flex justify-between items-center pb-2 mb-3">
+                            <h3 class="font-medium">Volume</h3>
+                            <button class="text-gray-400 hover:text-white">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                        </div>
+                        <div class="text-2xl font-bold text-green-500 mb-1" id="volumeValue">$1.2B</div>
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-arrow-up text-green-500 mr-1"></i>
+                            <span class="text-green-500">+12.4%</span>
+                            <span class="text-gray-400 ml-2">24h</span>
+                        </div>
+                    </div>
+
+                    <!-- RSI Widget -->
+                    <div class="widget-container rounded-xl p-4">
+                        <div class="widget-header flex justify-between items-center pb-2 mb-3">
+                            <h3 class="font-medium">RSI</h3>
+                            <button class="text-gray-400 hover:text-white">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                        </div>
+                        <div class="text-2xl font-bold mb-1" id="rsiValue">64.2</div>
+                        <div class="flex items-center text-sm">
+                            <span class="text-gray-400">Overbought</span>
+                        </div>
+                    </div>
+
+                    <!-- MACD Widget -->
+                    <div class="widget-container rounded-xl p-4">
+                        <div class="widget-header flex justify-between items-center pb-2 mb-3">
+                            <h3 class="font-medium">MACD</h3>
+                            <button class="text-gray-400 hover:text-white">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-sm text-gray-400">Signal</div>
+                                <div class="text-xl font-bold text-red-500" id="macdSignal">12.45</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-400">Histogram</div>
+                                <div class="text-xl font-bold text-green-500" id="macdHistogram">3.21</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeframe Controls -->
+                <div class="flex justify-between mb-4 overflow-x-auto pb-2">
+                    <div class="flex space-x-2">
+                        <button class="timeframe-btn px-3 py-1 rounded-lg bg-gray-800 text-sm whitespace-nowrap active" data-timeframe="1m">1m</button>
+                        <button class="timeframe-btn px-3 py-1 rounded-lg bg-gray-800 text-sm whitespace-nowrap" data-timeframe="5m">5m</button>
+                        <button class="timeframe-btn px-3 py-1 rounded-lg bg-gray-800 text-sm whitespace-nowrap" data-timeframe="15m">15m</button>
+                        <button class="timeframe-btn px-3 py-1 rounded-lg bg-gray-800 text-sm whitespace-nowrap" data-timeframe="1h">1h</button>
+                        <button class="timeframe-btn px-3 py-1 rounded-lg bg-gray-800 text-sm whitespace-nowrap" data-timeframe="4h">4h</button>
+                        <button class="timeframe-btn px-3 py-1 rounded-lg bg-gray-800 text-sm whitespace-nowrap" data-timeframe="1d">1d</button>
+                        <button class="timeframe-btn px-3 py-1 rounded-lg bg-gray-800 text-sm whitespace-nowrap" data-timeframe="1w">1W</button>
+                        <button class="timeframe-btn px-3 py-1 rounded-lg bg-gray-800 text-sm whitespace-nowrap" data-timeframe="1mo">1M</button>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="px-3 py-1 rounded-lg bg-gray-800 text-sm whitespace-nowrap" data-chart-type="candlestick">Candlestick</button>
+                        <button class="px-3 py-1 rounded-lg bg-gray-800 text-sm whitespace-nowrap" data-chart-type="line">Line</button>
+                        <button class="px-3 py-1 rounded-lg bg-gray-800 text-sm whitespace-nowrap" data-chart-type="area">Area</button>
+                    </div>
+                </div>
+
+                <!-- Technical Indicators -->
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-medium">Technical Indicators</h3>
+                        <button id="addIndicatorBtn" class="text-primary text-sm flex items-center">
+                            <i class="fas fa-plus mr-1"></i>Add
+                        </button>
+                    </div>
+                    <div class="indicator-list flex flex-wrap gap-2">
+                        <button class="indicator-btn px-3 py-1.5 rounded-lg bg-gray-800 text-sm">Moving Average</button>
+                        <button class="indicator-btn px-3 py-1.5 rounded-lg bg-gray-800 text-sm">RSI</button>
+                        <button class="indicator-btn px-3 py-1.5 rounded-lg bg-gray-800 text-sm">MACD</button>
+                        <button class="indicator-btn px-3 py-1.5 rounded-lg bg-gray-800 text-sm">Bollinger Bands</button>
+                        <button class="indicator-btn px-3 py-1.5 rounded-lg bg-gray-800 text-sm">Stochastic</button>
+                        <button class="indicator-btn px-3 py-1.5 rounded-lg bg-gray-800 text-sm">VWAP</button>
+                        <button class="indicator-btn px-3 py-1.5 rounded-lg bg-gray-800 text-sm">Ichimoku</button>
+                        <button class="indicator-btn px-3 py-1.5 rounded-lg bg-gray-800 text-sm">Fibonacci</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trading Controls -->
+            <div class="bg-gray-900 border-t border-gray-800 p-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-2">
+                        <div class="grid grid-cols-2 gap-4">
+                            <button id="buyBtn" class="bg-success hover:bg-green-700 py-3 rounded-lg font-medium transition flex items-center justify-center">
+                                <i class="fas fa-arrow-up mr-2"></i>BUY
+                            </button>
+                            <button id="sellBtn" class="bg-error hover:bg-red-700 py-3 rounded-lg font-medium transition flex items-center justify-center">
+                                <i class="fas fa-arrow-down mr-2"></i>SELL
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-gray-400 text-sm">Balance</div>
+                        <div class="text-xl font-bold" id="balance">$10,000.00</div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-gray-400 text-sm">Portfolio Value</div>
+                        <div class="text-xl font-bold" id="portfolioValue">$11,243.50</div>
+                    </div>
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-gray-400 text-sm">Today's P/L</div>
+                        <div class="text-xl font-bold text-success" id="todayPL">+$243.50 (+2.3%)</div>
+                    </div>
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-gray-400 text-sm">Open Positions</div>
+                        <div class="text-xl font-bold" id="openPositions">3</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Panel - Watchlist & Market Overview -->
+        <aside class="w-full md:w-80 bg-gray-900 border-l border-gray-800 overflow-y-auto">
+            <div class="p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold">Watchlist</h3>
+                    <button id="addAssetBtn" class="text-primary text-sm flex items-center">
+                        <i class="fas fa-plus mr-1"></i>Add
+                    </button>
+                </div>
+                <div class="space-y-2" id="watchlistContainer">
+                    <div class="watchlist-item flex justify-between items-center p-2 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3">BTC</span>
+                            <div>
+                                <div class="font-medium">Bitcoin</div>
+                                <div class="text-xs text-gray-400">BTC/USDT</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-medium">$63,421.75</div>
+                            <div class="text-xs text-success">+2.34%</div>
+                        </div>
+                    </div>
+                    <div class="watchlist-item flex justify-between items-center p-2 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center mr-3">ETH</span>
+                            <div>
+                                <div class="font-medium">Ethereum</div>
+                                <div class="text-xs text-gray-400">ETH/USDT</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-medium">$3,421.50</div>
+                            <div class="text-xs text-error">-1.23%</div>
+                        </div>
+                    </div>
+                    <div class="watchlist-item flex justify-between items-center p-2 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center mr-3">SOL</span>
+                            <div>
+                                <div class="font-medium">Solana</div>
+                                <div class="text-xs text-gray-400">SOL/USDT</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-medium">$142.75</div>
+                            <div class="text-xs text-success">+5.67%</div>
+                        </div>
+                    </div>
+                    <div class="watchlist-item flex justify-between items-center p-2 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center mr-3">ADA</span>
+                            <div>
+                                <div class="font-medium">Cardano</div>
+                                <div class="text-xs text-gray-400">ADA/USDT</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-medium">$0.48</div>
+                            <div class="text-xs text-success">+3.42%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="font-bold mt-6 mb-3">Market Overview</h3>
+                <div class="space-y-2" id="marketOverview">
+                    <div class="market-overview-item p-2 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <div class="flex justify-between">
+                            <span>FTSE 100</span>
+                            <span class="text-success">+0.8% 1.2K</span>
+                        </div>
+                    </div>
+                    <div class="market-overview-item p-2 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <div class="flex justify-between">
+                            <span>Dow Jones</span>
+                            <span class="text-error">-0.3% 3.4K</span>
+                        </div>
+                    </div>
+                    <div class="market-overview-item p-2 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <div class="flex justify-between">
+                            <span>NASDAQ</span>
+                            <span class="text-success">+1.1% 5.7K</span>
+                        </div>
+                    </div>
+                    <div class="market-overview-item p-2 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer">
+                        <div class="flex justify-between">
+                            <span>S&P 500</span>
+                            <span class="text-success">+0.9% 2.1K</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Bottom Panel - Trade History & Order Book -->
+    <div class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 p-4">
+        <div class="flex space-x-4">
+            <div class="w-1/2">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-medium">Recent Trades</h3>
+                    <button id="viewAllTrades" class="text-primary text-sm">View All</button>
+                </div>
+                <div class="overflow-y-auto max-h-32" id="tradeHistoryContainer">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-gray-400">
+                                <th class="pb-2">Time</th>
+                                <th class="pb-2">Type</th>
+                                <th class="pb-2">Quantity</th>
+                                <th class="pb-2">Price</th>
+                                <th class="pb-2">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="trade-history-row border-t border-gray-800">
+                                <td class="py-2">10:32:15</td>
+                                <td class="py-2 text-success">Buy</td>
+                                <td class="py-2">0.12 BTC</td>
+                                <td class="py-2">$63,410.00</td>
+                                <td class="py-2">$7,609.20</td>
+                            </tr>
+                            <tr class="trade-history-row border-t border-gray-800">
+                                <td class="py-2">10:29:44</td>
+                                <td class="py-2 text-error">Sell</td>
+                                <td class="py-2">0.08 BTC</td>
+                                <td class="py-2">$63,430.00</td>
+                                <td class="py-2">$5,074.40</td>
+                            </tr>
+                            <tr class="trade-history-row border-t border-gray-800">
+                                <td class="py-2">10:15:22</td>
+                                <td class="py-2 text-success">Buy</td>
+                                <td class="py-2">0.05 BTC</td>
+                                <td class="py-2">$63,425.00</td>
+                                <td class="py-2">$3,171.25</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="w-1/2">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-medium">Order Book</h3>
+                    <button id="viewOrderBook" class="text-primary text-sm">View All</button>
+                </div>
+                <div class="flex space-x-2">
+                    <div class="flex-1">
+                        <div class="text-right text-success mb-1 order-book-cell">0.02 BTC</div>
+                        <div class="text-right text-success mb-1 order-book-cell">0.05 BTC</div>
+                        <div class="text-right text-success mb-1 order-book-cell">0.10 BTC</div>
+                        <div class="text-right text-success mb-1 order-book-cell">0.15 BTC</div>
+                        <div class="text-right text-success order-book-cell">0.20 BTC</div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-right mb-1 order-book-cell">$63,421.75</div>
+                        <div class="text-right mb-1 order-book-cell">$63,421.50</div>
+                        <div class="text-right mb-1 order-book-cell">$63,421.00</div>
+                        <div class="text-right mb-1 order-book-cell">$63,420.50</div>
+                        <div class="text-right order-book-cell">$63,420.00</div>
+                    </div>
+                </div>
+                <div class="h-16 mt-2">
+                    <div class="flex justify-between items-end h-full">
+                        <div class="w-full bg-gray-700 rounded-full h-2">
+                            <div class="bg-green-500 h-2 rounded-full w-3/4"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex space-x-2 mt-2">
+                    <div class="flex-1">
+                        <div class="text-left text-error mb-1 order-book-cell">0.20 BTC</div>
+                        <div class="text-left text-error mb-1 order-book-cell">0.15 BTC</div>
+                        <div class="text-left text-error mb-1 order-book-cell">0.10 BTC</div>
+                        <div class="text-left text-error mb-1 order-book-cell">0.05 BTC</div>
+                        <div class="text-left text-error order-book-cell">0.02 BTC</div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-left mb-1 order-book-cell">$63,422.00</div>
+                        <div class="text-left mb-1 order-book-cell">$63,422.50</div>
+                        <div class="text-left mb-1 order-book-cell">$63,423.00</div>
+                        <div class="text-left mb-1 order-book-cell">$63,423.50</div>
+                        <div class="text-left order-book-cell">$63,424.00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 bottom-nav">
+        <div class="flex justify-around items-center py-3">
+            <button class="flex flex-col items-center text-primary">
+                <i class="fas fa-home text-xl"></i>
+                <span class="text-xs mt-1">Home</span>
+            </button>
+            <button class="flex flex-col items-center text-gray-400">
+                <i class="fas fa-chart-line text-xl"></i>
+                <span class="text-xs mt-1">Markets</span>
+            </button>
+            <button class="flex flex-col items-center text-gray-400">
+                <i class="fas fa-exchange-alt text-xl"></i>
+                <span class="text-xs mt-1">Trade</span>
+            </button>
+            <button class="flex flex-col items-center text-gray-400">
+                <i class="fas fa-wallet text-xl"></i>
+                <span class="text-xs mt-1">Portfolio</span>
+            </button>
+            <button class="flex flex-col items-center text-gray-400">
+                <i class="fas fa-user text-xl"></i>
+                <span class="text-xs mt-1">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Chart Script -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Mock data generation functions
+        function generateMockData(count) {
+            const data = [];
+            let basePrice = 60000;
+            for (let i = 0; i < count; i++) {
+                const open = basePrice;
+                const volatility = 1000;
+                const high = open + Math.random() * volatility;
+                const low = open - Math.random() * volatility;
+                const close = low + Math.random() * (high - low);
+                basePrice = close;
+                data.push({
+                    x: i,
+                    o: open,
+                    h: high,
+                    l: low,
+                    c: close
+                });
+            }
+            return data;
+        }
+
+        // Initialize chart
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        const priceChart = new Chart(ctx, {
+            type: 'candlestick',
+            data: {
+                labels: Array.from({length: 100}, (_, i) => i),
+                datasets: [{
+                    label: 'BTC/USDT',
+                    data: generateMockData(100),
+                    color: {
+                        up: '#10b981',
+                        down: '#ef4444',
+                        unchanged: '#94a3b8'
+                    },
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#94a3b8'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                        },
+                        ticks: {
+                            color: '#94a3b8'
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('dark');
+            const icon = this.querySelector('i');
+            if (icon.classList.contains('fa-moon')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        });
+
+        // Timeframe buttons
+        document.querySelectorAll('.timeframe-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
+                // In a real app, this would fetch new data based on timeframe
+                showNotification('Timeframe changed to ' + this.dataset.timeframe);
+            });
+        });
+
+        // Chart type buttons
+        document.querySelectorAll('[data-chart-type]').forEach(button => {
+            button.addEventListener('click', function() {
+                const type = this.dataset.chartType;
+                // In a real app, this would change chart type
+                showNotification('Chart type changed to ' + type);
+            });
+        });
+
+        // Simulate real-time price updates
+        setInterval(() => {
+            const currentPrice = document.getElementById('currentPrice');
+            const current = parseFloat(currentPrice.textContent.replace('$', '').replace(',', ''));
+            const change = (Math.random() - 0.5) * 1000;
+            const newPrice = current + change;
+            const changePercent = (change / current) * 100;
+            
+            currentPrice.textContent = '$' + newPrice.toLocaleString(undefined, {maximumFractionDigits: 2});
+            
+            const changeElement = document.getElementById('priceChange');
+            changeElement.textContent = (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%';
+            changeElement.className = changePercent >= 0 ? 'price-up flex items-center' : 'price-down flex items-center';
+        }, 3000);
+
+        // Handle buy/sell buttons
+        document.getElementById('buyBtn').addEventListener('click', function() {
+            const asset = document.getElementById('currentAsset').textContent;
+            showNotification(`Buy order placed for ${asset}!`);
+        });
+
+        document.getElementById('sellBtn').addEventListener('click', function() {
+            const asset = document.getElementById('currentAsset').textContent;
+            showNotification(`Sell order placed for ${asset}!`);
+        });
+
+        // Drawing tools selection
+        document.querySelectorAll('.drawing-tool').forEach(tool => {
+            tool.addEventListener('click', function() {
+                document.querySelectorAll('.drawing-tool').forEach(t => {
+                    t.classList.remove('active');
+                });
+                this.classList.add('active');
+                if (this.dataset.tool !== 'clear') {
+                    showNotification('Drawing tool selected: ' + this.title);
+                }
+            });
+        });
+
+        // Simulate market data updates
+        setInterval(() => {
+            document.querySelectorAll('.watchlist-item').forEach(item => {
+                const priceChange = (Math.random() - 0.5) * 0.02;
+                const priceElement = item.querySelector('.font-medium');
+                const priceValue = parseFloat(priceElement.textContent.replace('$', '').replace(',', ''));
+                const newPrice = priceValue * (1 + priceChange);
+                priceElement.textContent = '$' + newPrice.toLocaleString(undefined, {maximumFractionDigits: 2});
+                
+                const changeElement = item.querySelector('.text-xs');
+                changeElement.textContent = (priceChange >= 0 ? '+' : '') + (priceChange * 100).toFixed(2) + '%';
+                changeElement.className = priceChange >= 0 ? 'text-xs text-success' : 'text-xs text-error';
+            });
+        }, 5000);
+
+        // Login modal functionality
+        const loginButton = document.getElementById('loginButton');
+        const loginModal = document.getElementById('loginModal');
+        const closeLoginModal = () => {
+            loginModal.style.display = 'none';
+        };
+
+        loginButton.addEventListener('click', () => {
+            loginModal.style.display = 'flex';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === loginModal) {
+                closeLoginModal();
+            }
+        });
+
+        // Google login simulation
+        document.getElementById('googleLoginBtn').addEventListener('click', () => {
+            showNotification('Google authentication would open here in a real application');
+            closeLoginModal();
+        });
+
+        // Form submission
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            if(email && password) {
+                showNotification(`Login successful for ${email}`);
+                closeLoginModal();
+            } else {
+                showNotification('Please enter both email and password');
+            }
+        });
+
+        // Additional buttons
+        document.getElementById('forgotPassword').addEventListener('click', () => {
+            showNotification('Password reset functionality would go here');
+        });
+
+        document.getElementById('createAccount').addEventListener('click', () => {
+            showNotification('Account creation would go here');
+        });
+
+        // Refresh button
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            showNotification('Data refreshed successfully');
+        });
+
+        // Export button
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            showNotification('Chart exported successfully');
+        });
+
+        // Notifications
+        function showNotification(message) {
+            const notificationContainer = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = 'notification bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-lg';
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-info-circle text-primary mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            notificationContainer.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                const searchTerm = this.value.trim();
+                if (searchTerm) {
+                    showNotification(`Searched for: ${searchTerm}`);
+                    // In a real app, this would filter results
+                }
+            }
+        });
+
+        // Watchlist items click handler
+        document.querySelectorAll('.watchlist-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const assetName = this.querySelector('.font-medium').textContent;
+                const assetCode = this.querySelector('.text-xs').textContent;
+                document.getElementById('currentAsset').textContent = assetCode;
+                showNotification(`Switched to ${assetName}`);
+            });
+        });
+
+        // Add indicator button
+        document.getElementById('addIndicatorBtn').addEventListener('click', function() {
+            showNotification('Indicator selector would open here');
+        });
+
+        // View all trades button
+        document.getElementById('viewAllTrades').addEventListener('click', function() {
+            showNotification('Viewing all trades');
+        });
+
+        // View order book button
+        document.getElementById('viewOrderBook').addEventListener('click', function() {
+            showNotification('Viewing full order book');
+        });
+
+        // Add asset button
+        document.getElementById('addAssetBtn').addEventListener('click', function() {
+            showNotification('Add asset functionality would open here');
+        });
+
+        // Alert modal functionality
+        const alertModal = document.getElementById('alertModal');
+        const openAlertModal = () => {
+            alertModal.classList.remove('hidden');
+        };
+        
+        const closeAlertModal = () => {
+            alertModal.classList.add('hidden');
+        };
+
+        document.getElementById('notificationsBtn').addEventListener('click', () => {
+            openAlertModal();
+        });
+
+        document.getElementById('closeAlertModal').addEventListener('click', closeAlertModal);
+
+        // Alert form submission
+        document.getElementById('alertForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const asset = document.getElementById('alertAsset').value;
+            const price = document.getElementById('alertPrice').value;
+            showNotification(`Price alert created for ${asset} at $${price}`);
+            closeAlertModal();
+        });
+
+        // Initialize with sample notifications
+        setTimeout(() => {
+            showNotification('Welcome to TradeSim Pro!');
+            showNotification('New price alert added');
+        }, 1000);
+
+        // Simulate alert count updates
+        setInterval(() => {
+            const alertCount = document.getElementById('alertCount');
+            const count = Math.floor(Math.random() * 3) + 1;
+            alertCount.textContent = count;
+            alertCount.classList.toggle('hidden', count === 0);
+        }, 10000);
+    </script>
+</body>
+</html>
